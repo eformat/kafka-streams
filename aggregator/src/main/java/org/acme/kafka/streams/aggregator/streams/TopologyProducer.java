@@ -13,6 +13,7 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.apache.kafka.streams.state.WindowStore;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
@@ -21,6 +22,10 @@ import java.util.concurrent.TimeUnit;
 
 @ApplicationScoped
 public class TopologyProducer {
+
+    @ConfigProperty(name = "streams.aggregate.window.minutes")
+    int slidingWindow;
+
     static final String WEATHER_STATIONS_STORE = "weather-stations-store";
     private static final String WEATHER_STATIONS_TOPIC = "weather-stations";
     private static final String TEMPERATURE_VALUES_TOPIC = "temperature-values";
@@ -55,7 +60,7 @@ public class TopologyProducer {
                         }
                 )
                 .groupByKey()
-                .windowedBy(TimeWindows.of(TimeUnit.MINUTES.toMillis(1)))
+                .windowedBy(TimeWindows.of(TimeUnit.MINUTES.toMillis(slidingWindow)))
                 .aggregate(
                         Aggregation::new,
                         (stationId, value, aggregation) -> aggregation.updateFrom(value),
