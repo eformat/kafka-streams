@@ -34,3 +34,11 @@ services:
       KAFKA_CREATE_TOPICS: "storage-topic:1:1:compact,global-id-topic:1:1:compact,input-topic:1:1:compact,logx-topic:1:1:compact,dbx-topic:1:1:compact"
       KAFKA_NUM_PARTITIONS: 1
       KAFKA_DEFAULT_REPL_FACTOR: 1
+
+  materialize:
+    image: "quay.io/eformat/materialize-pod:latest"
+    ports:
+      - "6875:6875"
+    hostname: materalize
+    volumes:
+    - /home/mike/mzdata:/work/mzdata:Z
