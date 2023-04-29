@@ -1,32 +1,29 @@
 package org.acme.kafka.streams.aggregator.streams;
 
-import io.quarkus.kafka.client.serialization.JsonbSerde;
+import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
 import org.acme.kafka.streams.aggregator.model.Aggregation;
 import org.acme.kafka.streams.aggregator.model.TemperatureMeasurement;
 import org.acme.kafka.streams.aggregator.model.WeatherStation;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.utils.Bytes;
-import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.GlobalKTable;
+import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
-import org.apache.kafka.streams.state.WindowStore;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
 import java.time.Instant;
-import java.util.concurrent.TimeUnit;
+
 
 @ApplicationScoped
 public class TopologyProducer {
 
-    @ConfigProperty(name = "streams.aggregate.window.minutes")
-    int slidingWindow;
-
     static final String WEATHER_STATIONS_STORE = "weather-stations-store";
+
     private static final String WEATHER_STATIONS_TOPIC = "weather-stations";
     private static final String TEMPERATURE_VALUES_TOPIC = "temperature-values";
     private static final String TEMPERATURES_AGGREGATED_TOPIC = "temperatures-aggregated";
@@ -35,9 +32,9 @@ public class TopologyProducer {
     public Topology buildTopology() {
         StreamsBuilder builder = new StreamsBuilder();
 
-        JsonbSerde<WeatherStation> weatherStationSerde = new JsonbSerde<>(
+        ObjectMapperSerde<WeatherStation> weatherStationSerde = new ObjectMapperSerde<>(
                 WeatherStation.class);
-        JsonbSerde<Aggregation> aggregationSerde = new JsonbSerde<>(Aggregation.class);
+        ObjectMapperSerde<Aggregation> aggregationSerde = new ObjectMapperSerde<>(Aggregation.class);
 
         KeyValueBytesStoreSupplier storeSupplier = Stores.persistentKeyValueStore(
                 WEATHER_STATIONS_STORE);
@@ -46,10 +43,10 @@ public class TopologyProducer {
                 WEATHER_STATIONS_TOPIC,
                 Consumed.with(Serdes.Integer(), weatherStationSerde));
 
-        KStream<Windowed<Integer>, Aggregation> windowed = builder.stream(
-                TEMPERATURE_VALUES_TOPIC,
-                Consumed.with(Serdes.Integer(), Serdes.String())
-        )
+        builder.stream(
+                        TEMPERATURE_VALUES_TOPIC,
+                        Consumed.with(Serdes.Integer(), Serdes.String())
+                )
                 .join(
                         stations,
                         (stationId, timestampAndValue) -> stationId,
@@ -60,21 +57,18 @@ public class TopologyProducer {
                         }
                 )
                 .groupByKey()
-                .windowedBy(TimeWindows.of(TimeUnit.MINUTES.toMillis(slidingWindow)))
                 .aggregate(
                         Aggregation::new,
                         (stationId, value, aggregation) -> aggregation.updateFrom(value),
-                        Materialized.<Integer, Aggregation, WindowStore<Bytes, byte[]>>as(WEATHER_STATIONS_STORE)
+                        Materialized.<Integer, Aggregation> as(storeSupplier)
                                 .withKeySerde(Serdes.Integer())
                                 .withValueSerde(aggregationSerde)
                 )
-                .toStream();
-
-        KStream<Integer, Aggregation> rounded = windowed.map(((integerWindowed, aggregation) -> new KeyValue<>(integerWindowed.key(), aggregation)));
-        rounded.to(
-                TEMPERATURES_AGGREGATED_TOPIC,
-                Produced.with(Serdes.Integer(), aggregationSerde)
-        );
+                .toStream()
+                .to(
+                        TEMPERATURES_AGGREGATED_TOPIC,
+                        Produced.with(Serdes.Integer(), aggregationSerde)
+                );
 
         return builder.build();
     }

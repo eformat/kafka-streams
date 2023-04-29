@@ -36,26 +36,63 @@ http localhost:8081/weather-stations/meta-data
 
 compacted topic for temperatures-aggregated
 ```bash
-/opt/kafka_2.12-2.2.0/bin/kafka-topics.sh --zookeeper localhost:2181 --create --topic temperatures-aggregated --replication-factor 1 --partitions 1 --config "cleanup.policy=compact" --config "delete.retention.ms=100"  --config "segment.ms=100" --config "min.cleanable.dirty.ratio=0.01"
+/opt/kafka_2.13-2.8.0/bin/kafka-topics.sh --zookeeper localhost:2181 --create --topic temperatures-aggregated --replication-factor 1 --partitions 1 --config "cleanup.policy=compact" --config "delete.retention.ms=100"  --config "segment.ms=100" --config "min.cleanable.dirty.ratio=0.01"
 ```
 
 materialize, live rolling average temps per station for window
 ```bash
-psql -h localhost -p 6875 materialize -f ./load.sql
+psql -h localhost -p 6875 -U materialize materialize -f ./load.sql
 
-materialize=> select * from AVGTEMP;
+materialize=> select * from AVGTEMP order by stationId;
  avg  | count | max  |  min  | stationid | stationname 
 ------+-------+------+-------+-----------+-------------
-  3.5 |    10 | 24.1 | -30.8 |         8 | Oslo
- 13.2 |     9 |   21 |   -10 |         5 | Cusco
- 20.9 |     7 | 37.1 |  -6.8 |         4 | Tokio
- 10.7 |     7 | 37.3 |  -6.8 |         3 | Boston
- 25.5 |     6 | 40.4 |  -3.2 |         1 | Hamburg
- -8.3 |     9 |  0.8 | -29.5 |         6 | Svalbard
- 20.5 |    14 | 44.7 |   6.7 |         9 | Marrakesh
-  1.6 |    10 | 29.1 | -28.7 |         2 | Snowdonia
- 16.6 |    14 | 30.1 |   3.2 |         7 | Porthsmouth
-(9 rows)
+ 13.6 |   141 | 59.8 | -30.1 |         1 | Hamburg
+    6 |   123 | 44.5 | -35.3 |         2 | Snowdonia
+ 15.7 |   138 | 47.6 | -20.5 |         3 | Boston
+ 15.1 |   126 |   55 | -23.9 |         4 | Tokio
+ 11.3 |   133 | 46.9 | -26.1 |         5 | Cusco
+ -6.5 |   113 | 32.7 | -46.3 |         6 | Svalbard
+   13 |   127 |   51 | -23.9 |         7 | Porthsmouth
+  7.2 |   127 | 46.3 | -34.7 |         8 | Oslo
+ 20.4 |   137 | 52.8 | -19.5 |         9 | Marrakesh
+(9 rows) 
+```
 
-materialize=> 
+## Running
+
+Start Kafka and Materalize.
+
+```bash
+podman-compose -f docker-compose.yaml up -d
+```
+
+Run Producer.
+
+```bash
+mvn quarkus:dev -Dquarkus.http.port=8080 -Ddebug=5005 -f producer/pom.xml
+```
+
+Run Aggregator.
+
+```bash
+mvn quarkus:dev -Dquarkus.http.port=8081 -Ddebug=5006 -f aggregator/pom.xml
+```
+
+## Stopping
+
+Stop Kafka and Materalize.
+
+```bash
+podman-compose down
+```
+
+
+## Queries
+
+```bash
+/opt/kafka_2.13-2.8.0/bin/kafka-run-class.sh kafka.tools.GetOffsetShell --broker-list localhost:9092 --topic temperatures-aggregated --time -1 --offsets 1 | awk -F  ":" '{sum += $3} END {print sum}'
+
+/opt/kafka_2.13-2.8.0/bin/kafka-run-class.sh kafka.tools.GetOffsetShell --broker-list localhost:9092 --topic weather-stations --time -1 --offsets 1 | awk -F  ":" '{sum += $3} END {print sum}'
+
+/opt/kafka_2.13-2.8.0/bin/kafka-run-class.sh kafka.tools.GetOffsetShell --broker-list localhost:9092 --topic temperature-values --time -1 --offsets 1 | awk -F  ":" '{sum += $3} END {print sum}'
 ```

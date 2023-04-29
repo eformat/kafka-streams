@@ -14,6 +14,7 @@ public class Aggregation {
     public int count;
     public double sum;
     public double avg;
+    public long timestamp;
 
     public Aggregation updateFrom(TemperatureMeasurement measurement) {
         stationId = measurement.stationId;

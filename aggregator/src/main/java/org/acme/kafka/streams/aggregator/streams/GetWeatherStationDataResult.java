@@ -8,19 +8,21 @@ import java.util.OptionalInt;
 
 public class GetWeatherStationDataResult {
 
-    private static GetWeatherStationDataResult NOT_FOUND = new GetWeatherStationDataResult(null, null, null);
+    private static GetWeatherStationDataResult NOT_FOUND =
+            new GetWeatherStationDataResult(null, null, null);
 
-    private final List<WeatherStationData> result;
+    private final WeatherStationData result;
     private final String host;
     private final Integer port;
 
-    private GetWeatherStationDataResult(List<WeatherStationData> result, String host, Integer port) {
+    private GetWeatherStationDataResult(WeatherStationData result, String host,
+                                        Integer port) {
         this.result = result;
         this.host = host;
         this.port = port;
     }
 
-    public static GetWeatherStationDataResult found(List<WeatherStationData> data) {
+    public static GetWeatherStationDataResult found(WeatherStationData data) {
         return new GetWeatherStationDataResult(data, null, null);
     }
 
@@ -32,7 +34,7 @@ public class GetWeatherStationDataResult {
         return NOT_FOUND;
     }
 
-    public Optional<List<WeatherStationData>> getResult() {
+    public Optional<WeatherStationData> getResult() {
         return Optional.ofNullable(result);
     }
 

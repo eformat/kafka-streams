@@ -11,10 +11,10 @@ public class WeatherStationData {
     public double max = Double.MIN_VALUE;
     public int count;
     public double avg;
+
     public long timestamp;
 
-    private WeatherStationData(int stationId, String stationName, double min, double max,
-                               int count, double avg, long timestamp) {
+    private WeatherStationData(int stationId, String stationName, double min, double max, int count, double avg, long timestamp) {
         this.stationId = stationId;
         this.stationName = stationName;
         this.min = min;
@@ -24,7 +24,7 @@ public class WeatherStationData {
         this.timestamp = timestamp;
     }
 
-    public static WeatherStationData from(Aggregation aggregation, long timestamp) {
+    public static WeatherStationData from(Aggregation aggregation) {
         return new WeatherStationData(
                 aggregation.stationId,
                 aggregation.stationName,
@@ -32,6 +32,6 @@ public class WeatherStationData {
                 aggregation.max,
                 aggregation.count,
                 aggregation.avg,
-                timestamp);
+                aggregation.timestamp);
     }
 }
