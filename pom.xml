@@ -13,6 +13,7 @@
 
     <!-- sub modules -->
     <modules>
+        <module>consumer</module>
         <module>producer</module>
         <module>aggregator</module>
     </modules>

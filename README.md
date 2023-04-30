@@ -78,6 +78,12 @@ Run Aggregator.
 mvn quarkus:dev -Dquarkus.http.port=8081 -Ddebug=5006 -f aggregator/pom.xml
 ```
 
+Run Consumer.
+
+```bash
+mvn quarkus:dev -Dquarkus.http.port=8082 -Ddebug=5007 -f consumer/pom.xml
+```
+
 ## Stopping
 
 Stop Kafka and Materalize.
