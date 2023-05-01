@@ -2,8 +2,10 @@
 
 var connected = false;
 var socket;
-var myChart = echarts.init(document.getElementById('main'));
-let sData = [];
+var myChart1 = echarts.init(document.getElementById('main1'));
+var myChart2 = echarts.init(document.getElementById('main2'));
+let sData1 = [];
+let sData2 = [];
 
 // websocket connect to server
 function connect() {
@@ -19,30 +21,53 @@ function connect() {
     };
 
     socket.onmessage = function (m) {
-      console.log("Got message: " + m.data);
+      //console.log("Got message: " + m.data);
       $("#message").text(m.data);
       let dobj = JSON.parse(m.data);
       if (dobj.stationId == 1) {
-        now = new Date(+now + oneDay);
+        $("#samplecount1").text(dobj.stationName + " Sample Count");
+        now = new Date(dobj.timestamp);
         let d = {
-          name: now.toString(),
+          name: dobj.stationName,
           value: [
-            [now.getFullYear(), now.getMonth() + 1, now.getDate()].join('/'),
+            dobj.timestamp,
             dobj.count
           ]
         };
-
-        if (sData.length > 20) {
-          sData.shift;
+        if (sData1.length > 5) {
+          sData1.shift();
         }
-        sData.push(d);
+        sData1.push(d);
+        console.log(">> " + JSON.stringify(sData1));
 
-        console.log(">> " + sData);
-
-        myChart.setOption({
+        myChart1.setOption({
           series: [
             {
-              data: sData
+              data: sData1
+            }
+          ]
+        });
+      }
+      if (dobj.stationId == 2) {
+        $("#samplecount2").text(dobj.stationName + " Sample Count");
+        now = new Date(dobj.timestamp);
+        let d = {
+          name: dobj.stationName,
+          value: [
+            dobj.timestamp,
+            dobj.count
+          ]
+        };
+        if (sData2.length > 5) {
+          sData2.shift();
+        }
+        sData2.push(d);
+        console.log(">> " + JSON.stringify(sData2));
+
+        myChart2.setOption({
+          series: [
+            {
+              data: sData2
             }
           ]
         });
@@ -88,8 +113,14 @@ var option = {
     trigger: 'axis',
     formatter: function (params) {
       params = params[0];
-      var date = new Date(params.name);
+      var date = new Date(params.value[0]);
       return (
+        date.getHours() +
+        ':' +
+        (date.getMinutes()<10?'0':'') + date.getMinutes() +
+        ':' +
+        date.getSeconds() +
+        ' ' +
         date.getDate() +
         '/' +
         (date.getMonth() + 1) +
@@ -107,6 +138,11 @@ var option = {
     type: 'time',
     splitLine: {
       show: false
+    },
+    axisLabel: {
+      formatter: (function (value) {
+        return echarts.format.formatTime('hh:mm:ss', value);
+      })
     }
   },
   yAxis: {
@@ -124,7 +160,8 @@ var option = {
       name: 'Fake Data',
       type: 'line',
       showSymbol: false,
-      data: data
+      data: data,
+      itemStyle: { normal: { areaStyle: { type: 'default' } } },
     }
   ]
 };
@@ -145,4 +182,5 @@ var option = {
 //  });
 //}, 400);
 
-option && myChart.setOption(option);
+option && myChart1.setOption(option);
+option && myChart2.setOption(option);

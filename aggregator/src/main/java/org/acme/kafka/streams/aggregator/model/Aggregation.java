@@ -4,6 +4,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Date;
 
 @RegisterForReflection
 public class Aggregation {
@@ -27,6 +28,8 @@ public class Aggregation {
 
         min = Math.min(min, measurement.value);
         max = Math.max(max, measurement.value);
+
+        timestamp = new Date().getTime();
 
         return this;
     }
